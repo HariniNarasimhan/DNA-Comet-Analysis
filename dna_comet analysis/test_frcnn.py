@@ -282,3 +282,56 @@ for idx, img_name in enumerate(sorted(os.listdir(img_path))):
     bar.next()
 bar.finish()
 
+# classification model(damaged or undamaged
+print('-----------------module 2 -------------------------------')
+
+
+def histogram_equalize(imgs):
+    images = imgs
+    for i, img in enumerate(images):
+        b, g, r = cv2.split(img)
+        red = cv2.equalizeHist(r)
+        green = cv2.equalizeHist(g)
+        blue = cv2.equalizeHist(b)
+        img = cv2.merge((red, green, blue))
+        images[i, :, :, :] = img
+    return images
+
+
+def cropped_image(df):
+    x_test = []
+    for i in range(df.shape[0]):
+        image = cv2.cvtColor(cv2.imread(df.filepath[i]), cv2.COLOR_BGR2RGB)
+        cropped = image[df['ymin'][i]:df['ymax'][i], df['xmin'][i]:df['xmax'][i]]
+        x_test.append(cropped)
+    return np.array(x_test)
+
+
+def resize(images, size):
+    imgs = []
+    for i, img in enumerate(images):
+        imgs.append(cv2.resize(img, (size, size)))
+    return np.reshape(imgs, (len(imgs), size, size, 3))
+
+
+x_test = cropped_image(df_dat)
+x_test = resize(x_test, 128)
+x_test = histogram_equalize(x_test)
+
+model = Sequential()
+model.add(Convolution2D(##, kernel_size=(#, #), padding='Same', input_shape=(128, 128, 3)))
+model.add(LeakyReLU(alpha=#))
+model.add(Convolution2D(##, kernel_size=(#, #), padding='Same'))
+model.add(LeakyReLU(alpha=#))
+model.add(Flatten())
+model.add(Dense(#, activation='relu'))
+model.add(Dense(#, activation='relu'))
+model.add(Dense(#, activation='sigmoid'))
+
+model.load_weights('.model/classification_model.h5')
+predict = model.predict(x_test, batch_size=#, verbose=1)
+predict = 1 * (predict > 0.5)
+
+df_dat['damage_analysis'] = predict
+df_dat['damage_analysis'].replace({0: 'undamaged', 1: 'damaged'}, inplace=True)
+
