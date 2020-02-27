@@ -335,3 +335,131 @@ predict = 1 * (predict > 0.5)
 df_dat['damage_analysis'] = predict
 df_dat['damage_analysis'].replace({0: 'undamaged', 1: 'damaged'}, inplace=True)
 
+
+#measuring the damage
+print('-----------------module 3 -------------------------------')
+
+df_damaged = df_dat[df_dat['damage_analysis'] == 'damaged'].reset_index()
+x_test = cropped_image(df_damaged)
+print(x_test.shape)
+
+
+def load_imgs(images):
+    imgs = []
+    shape = []
+    for im in range(0, len(images)):
+        data = images[im]
+        data = data / 255
+        height = data.shape[0]
+        width = data.shape[1]
+        imgs.append(cv2.resize(data, (150, 150)) / 255)
+        shape.append(data.shape)
+    imgs = np.reshape(np.array(imgs), (len(imgs), 150, 150, 3))
+    return imgs, shape
+
+
+images, shape = load_imgs(x_test)
+loaded_model = load_model('./model/model_300_bs-16.h5')
+
+predictions = loaded_model.predict(images, verbose=1)
+
+for i in range(len(images)):
+    img = cv2.resize(images[i], (shape[i][1], shape[i][0]))
+    height = shape[i][0]
+    width = shape[i][1]
+    predictions[i][0:43:2] = (predictions[i][0:43:2]) * (width / 150)
+    predictions[i][1:43:2] = (predictions[i][1:43:2]) * (height / 150)
+
+predictions = pd.DataFrame(predictions)
+keypoints = predictions.astype(np.int)
+
+print('------ done with keypoints prediction ---------------------')
+
+
+def otherpoints(i):
+    x = keypoints.iloc[i, 0:40:2].values
+    y = keypoints.iloc[i, 1:40:2].values
+    df = pd.DataFrame()
+    df['x'] = x
+    df['y'] = y
+    return df.values.tolist()
+
+
+def dnapercent_intens(image, radius, center, vertices):
+    head = image.copy()
+    comet = image.copy()
+    cv2.circle(head, (int(center[0]), int(center[1])), int(radius), color=(255, 255, 255), thickness=-1)
+    head[head != 255] = 0
+    head_dna = sum(image[np.where(head == 255)])
+    head_area = len(image[np.where(head == 255)])
+
+    cv2.fillPoly(comet, [vertices], color=(255, 255, 255))
+    comet[comet != 255] = 0
+    total_dna = sum(image[np.where(comet == 255)])
+    tail = comet - head
+    tail_dna = sum(image[np.where(tail == 255)])
+    tail_area = len(image[np.where(tail == 255)])
+
+    return head_dna, total_dna, tail_dna, head, tail, head_area, tail_area
+
+
+measurements = []
+
+for i in range(len(keypoints)):
+    image = x_test[i]
+    im_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+
+    mask = image.copy()
+    distance = pairwise.euclidean_distances([keypoints.iloc[i, -2:]], Y=otherpoints(i))[0]
+    tail_length = distance.max() - distance.min()
+    head_length = 2 * distance.min()
+    vertices = np.array(otherpoints(i), dtype=np.int32)
+    vertices = vertices.reshape((-1, 1, 2))
+    HDNAP, DNAcontent, TDNAP, headregion, Tail_region, ha, ta = dnapercent_intens(image, distance.min(),
+                                                                                  keypoints.iloc[i, -2:].values,
+                                                                                  vertices)
+    head_int, tot_int, tail_int, h, tail, hea, taa = dnapercent_intens(im_gray, distance.min(),
+                                                                       keypoints.iloc[i, -2:].values, vertices)
+    Tail_region = cv2.cvtColor(Tail_region, cv2.COLOR_RGB2GRAY)
+    contours, hierarchy = cv2.findContours(Tail_region, 1, 2)
+    cnts = []
+    for cnt in contours:
+        cnts.append(len(cnt))
+    cv2.drawContours(mask, contours, -1, color=(0, 255, 0), thickness=5)
+    cnt = contours[np.argmax(cnts)]
+    M = cv2.moments(cnt)
+    cx = int(M['m10'] / M['m00'])
+    cy = int(M['m01'] / M['m00'])
+    cv2.circle(mask, (cx, cy), 5, color=(0, 0, 255), thickness=-1)
+    tail_distance = pairwise.euclidean_distances([keypoints.iloc[i, -2:]], Y=[[cx, cy]])[0]
+    Olive_tail_moment = tail_distance[0] * (TDNAP / DNAcontent)
+    try:
+        head_intensity = (head_int / hea)
+    except ZeroDivisionError:
+        head_intensity = 0
+    try:
+        tail_intensity = (tail_int / taa)
+    except ZeroDivisionError:
+        tail_intensity = 0
+    try:
+        head_DNA_percentage = (HDNAP / DNAcontent)
+    except ZeroDivisionError:
+        head_DNA_percentage = 0
+    try:
+        Tail_DNA_percentage = (TDNAP / DNAcontent)
+    except ZeroDivisionError:
+        Tail_DNA_percentage = 0
+
+    measurements.append([head_length] +
+                        [tail_length] +
+                        [head_intensity] +
+                        [tail_intensity] +
+                        [head_DNA_percentage * 100] +
+                        [Tail_DNA_percentage * 100] + [Olive_tail_moment])
+
+measurements = pd.DataFrame(measurements, columns=['head_length', 'tail_length', 'head_intensity', 'tail_intensity',
+                                                   'head_DNA_percentage', 'Tail_DNA_percentage', 'Olive_Tail_moment'])
+final_df = df_damaged[['image_names', 'comet_number']]
+final_df = pd.concat([final_df, measurements], axis=1)
+#
+final_df.to_csv('./results/final_result.csv', index=False)
