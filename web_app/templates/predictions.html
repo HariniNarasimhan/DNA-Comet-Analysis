@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>Your Prediction!</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+<body style="background-color:white">
+<div id="maintext" style="position:absolute; margin:auto; width:700px; height:300px; text-align:center; top:0; bottom: 0; left: 0; right: 0;">
+  <h1 class="text-dark mb-5"> Your Prediction </h1>
+  <p class="text-dark"> My algorithm gave this prediction: </p>
+  <img src="{{ url_for('send_file', filename=image_file_name)}}" style ="max-width: 1000px; max-height: 500px; margin-top: 30px; margin-bottom: 10px; align="middle">
+  <table class="table-bordered text-dark" style = "text-align:center;align="left"">
+  <tr>
+        <th>Comet number</th>
+        <th>head_length</th>
+        <th>tail_length</th>
+	<th>head_intensity</th>
+	<th>tail_intensity</th>
+        <th>head_DNA_percentage</th>
+        <th>Tail_DNA_percentage</th>
+	<th>Olive_tail_moment</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for ob in predictions %}
+    <tr>
+        <td>{{ ob.comet_number }}</td>
+        <td>{{ ob.head_length }}</td>
+        <td>{{ ob.tail_length }}</td>
+	<td>{{ ob.head_intensity }}</td>
+        <td>{{ ob.tail_intensity }}</td>
+        <td>{{ ob.head_DNA_percentage }}</td>
+	<td>{{ ob.Tail_DNA_percentage }}</td>
+        <td>{{ ob.Olive_tail_moment }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<a href="{{ url_for('send_file', filename=predicted_image_name)}}" download><button class="button mt-3">Download the prediction image</button></a>
+
+<a href="{{ url_for('main_page') }}"><button class="button mt-3">Try again?</button></a>
+</div>
+</body>
+</html>

@@ -1,0 +1,9 @@
+scipy
+progress
+pandas
+matplotlib
+h5py
+Keras==2.0.3
+numpy
+opencv-python
+sklearn
