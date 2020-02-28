@@ -10,10 +10,13 @@ damage parameters of each damaged comets in the images and prediction image corr
 image in the input.
 
 Sample image from the open source google images:
+
 ![](image/opensource.png)
 
 Output prediction:
+
 ![](image/output_image.png)
 
 Output CSV:
+
 ![](image/output_csv.png)
