@@ -13,4 +13,6 @@ It opens the web page as below
 
 ![](images/index_page.png)
 
+Choose the image to predict and then it takes you to prediction page as below
+
 ![](images/prediction_page.png)
