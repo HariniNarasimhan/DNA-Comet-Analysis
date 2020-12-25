@@ -32,6 +32,9 @@ The comets can express the destruction in varying levels based on the damage cau
 
 model name- model_keypoint.h5
 
+### Architecture 
+![preview1](archi.PNG)
+
 All the parameters are estimated by Image processing techniques embedded with Deep learning model.
 
 To obtain the trained model email - 
